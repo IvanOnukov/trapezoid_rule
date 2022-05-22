@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy
+from numpy import zeros
 from sympy import parse_expr
 
 
@@ -8,9 +9,8 @@ def f(x_in, form="sin(x)"):
     """конвертирование из строгого формата в численный формат"""
     expr = parse_expr(form)
     x = sympy.symbols('x')
-    f = sympy.lambdify(x, expr, 'numpy')
-    return float(f(x_in))
-
+    fun = sympy.lambdify(x, expr, 'numpy')
+    return float(fun(x_in))
 
 def range_f(x_in, form):
     """вычисление значений функции в заданных точках """
@@ -23,7 +23,7 @@ def range_f(x_in, form):
     return result
 
 
-def trapezoid_method(func, a, b, nseg=50, parametr=1, chart=False):
+def trapezoid_method(func, a, b, nseg, chart=False):
     """
         Формула трапеций
 
@@ -38,7 +38,7 @@ def trapezoid_method(func, a, b, nseg=50, parametr=1, chart=False):
         nseg - число отрезков, на которые разбивается [a;b]
         chart - флаг отображения графика
     """
-    dx = (float(b) - float(a)) / (float(parametr) * float(nseg))
+    dx = (float(b) - float(a)) / float(nseg)
     sum_area = 0.5 * (f(a, func) + f(b, func))
     for i in range(1, nseg):
         sum_area += f(a + i * dx, func)
@@ -54,13 +54,14 @@ def trapezoid_method(func, a, b, nseg=50, parametr=1, chart=False):
 
     return answer
 
+
 def _rectangle_rule(func, a, b, nseg, frac):
     """Обобщённое правило прямоугольников."""
     dx = 1.0 * (b - a) / nseg
     sum = 0.0
-    xstart = a + frac * dx # 0 <= frac <= 1 задаёт долю смещения точки,
-                           # в которой вычисляется функция,
-                           # от левого края отрезка dx
+    xstart = a + frac * dx  # 0 <= frac <= 1 задаёт долю смещения точки,
+    # в которой вычисляется функция,
+    # от левого края отрезка dx
 
     for i in range(nseg):
         sum += f(xstart + i * dx, func)
@@ -73,7 +74,7 @@ def midpoint_rectangle_rule(func, a, b, nseg):
     return _rectangle_rule(func, a, b, nseg, 0.5)
 
 
-def trapezoid_rule(func, a, b, rtol=1e-8, nseg0=1):
+def trapezoid_rule(func, a, b, rtol=0.01, nseg0=100):
     """Правило трапеций
        rtol - желаемая относительная точность вычислений
        nseg0 - начальное число отрезков разбиения"""
@@ -120,9 +121,22 @@ def graph(a, b, form="sin(x)", delt=0.5, nseg=50):
     plt.show()
 
 
+def PrintTriangular(A, i):
+    #print(' ', end=' ')
+    for l in range(len(A)):
+        print('p={0:<4d}'.format(p + l * q), end=' ')
+    print()
+    for m in range(len(A)):
+        print('s={0:<2d}'.format(m), end=' ')
+        for l in range(m + 1 - i):
+            print('{0:7.4f}'.format(A[m, l]), end=' ')
+        print()
+    print()
+
+
 if __name__ == "__main__":
 
-    path = "/home/miakal/dev/calcMethod/task_4/src/testData/form2"
+    path = "testData/form3"
 
     file = open(path, 'r')
     try:
@@ -134,9 +148,26 @@ if __name__ == "__main__":
     finally:
         file.close()
 
-    trapezoid_method(form, a, b, segments)
-    trapezoid_rule(form, a, b, exactness, segments)
+    # trapezoid_method(form, a, b, segments)
+    # trapezoid_rule(form, a, b, exactness, segments)
 
-    # m = 3.0
-    # delta = (trapezoid_method(form, a, b, steps, 2) - trapezoid_method(form, a, b, steps)) / m
-    # print(delta)
+    r = 3   # коифициент сгушениея
+    S = 4   # количество сеток на которых будет проводится вычисления
+    p = 2   #порядок точности исходной формулы
+    q = 2   #для метода трапеций равен 2
+
+    U = zeros((S, S))
+    R = zeros((S, S))
+
+    for s in range(S):
+        U[s, 0] = trapezoid_method(form, a, b, (r ** s) * segments)
+
+
+    for s in range(1, S):
+        for l in range(s):
+            R[s, l] = (U[s, l] - U[s - 1, l]) / (r ** (p + l * q) - 1)
+            U[s, l + 1] = U[s, l] + R[s, l]
+    print('Таблица приближённых значений интеграла:')
+    PrintTriangular(U, 0)
+    print('Таблица оценок ошибок:')
+    PrintTriangular(R, 1)
